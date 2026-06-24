@@ -1,0 +1,7 @@
+# Robot Agent Registry — public API vhost.
+# Append this block to the VPS Caddyfile (alongside the Operations api vhost).
+# Caddy obtains/renews TLS for reg.robotunnel.io automatically.
+
+reg.robotunnel.io {
+	reverse_proxy 127.0.0.1:8090
+}

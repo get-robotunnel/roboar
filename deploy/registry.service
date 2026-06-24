@@ -1,0 +1,17 @@
+[Unit]
+Description=Robot Agent Registry API
+After=network.target
+
+[Service]
+Type=simple
+User=robotunnel
+WorkingDirectory=/opt/robot-agent-registry
+ExecStart=/opt/robot-agent-registry/bin/robot-agent-registry
+Restart=always
+RestartSec=5
+EnvironmentFile=/opt/robot-agent-registry/config/.env
+StandardOutput=append:/var/log/robot-agent-registry.log
+StandardError=append:/var/log/robot-agent-registry.log
+
+[Install]
+WantedBy=multi-user.target

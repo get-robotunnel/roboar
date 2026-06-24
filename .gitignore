@@ -1,0 +1,18 @@
+# Binaries
+/robot-agent-registry
+/registry
+*.exe
+
+# Logs
+*.log
+
+# Python
+__pycache__/
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Local env
+.env
