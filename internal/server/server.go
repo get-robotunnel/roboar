@@ -66,6 +66,12 @@ func (s *Server) routes() {
 	v1.PATCH("/agents/:agent_id/capabilities/:capability_id", s.platformAuthByAgent, s.patchCapability)
 	v1.DELETE("/agents/:agent_id/capabilities/:capability_id", s.platformAuthByAgent, s.deleteCapability)
 
+	// Agent self-registration (spec §1): no platform token needed — agent's Ed25519
+	// key is its identity. Heartbeat uses Agent-Signature; claim uses owner Ed25519.
+	v1.POST("/agents/self-register", s.selfRegister)
+	v1.POST("/agents/:agent_id/heartbeat", s.agentSigAuth, s.agentHeartbeat)
+	v1.POST("/agents/:agent_id/claim", s.claimAgent)
+
 	// Identity quick-register (no auth — public key is the identity credential)
 	v1.POST("/identities/quick", s.quickIdentity)
 

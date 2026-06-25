@@ -37,21 +37,24 @@ type Connection struct {
 }
 
 type Agent struct {
-	AgentID      string          `json:"agent_id"`
-	PlatformID   string          `json:"platform_id"`
-	OwnerID      string          `json:"owner_id"`
-	Name         string          `json:"name"`
-	Description  string          `json:"description"`
-	AgentType    string          `json:"agent_type"`
-	Version      string          `json:"version"`
-	Status       string          `json:"status"`
-	Visibility   string          `json:"visibility"`
-	IdentityKind string          `json:"identity_kind"`
-	Connection   Connection      `json:"connection"`
-	Capabilities []Capability    `json:"capabilities"`
-	Metadata     json.RawMessage `json:"metadata,omitempty"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	AgentID       string          `json:"agent_id"`
+	PlatformID    string          `json:"platform_id"`
+	OwnerID       string          `json:"owner_id"`
+	Name          string          `json:"name"`
+	Description   string          `json:"description"`
+	AgentType     string          `json:"agent_type"`
+	Version       string          `json:"version"`
+	Status        string          `json:"status"`
+	ClaimStatus   string          `json:"claim_status,omitempty"`
+	WalletAddress string          `json:"wallet_address,omitempty"`
+	PublicKey     string          `json:"public_key,omitempty"`
+	Visibility    string          `json:"visibility"`
+	IdentityKind  string          `json:"identity_kind"`
+	Connection    Connection      `json:"connection"`
+	Capabilities  []Capability    `json:"capabilities"`
+	Metadata      json.RawMessage `json:"metadata,omitempty"`
+	CreatedAt     time.Time       `json:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }
 
 type Capability struct {

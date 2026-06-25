@@ -1,12 +1,19 @@
-"""Robot Agent Registry — platform-side SDK.
+"""Robot Agent Registry — SDK.
 
-Public surface:
-    RARAgent, Capability  — register agents/capabilities and heartbeat (spec §4).
-    RegistryClient        — thin HTTP client over the registry API.
+Primary API (self-registering robot agents, spec §1-2):
+    Agent        — self-registering robot agent with built-in MCP server
+    Capability   — describes one capability exposed as an MCP tool
+    AgentClient  — call remote robot agents' MCP tools (spec §4.2)
+
+Platform API (existing, for managed platforms with human owners):
+    RARAgent     — platform-side agent: register, capability CRUD, heartbeat
+    RegistryClient — thin HTTP client over the registry API
 """
 
-from .agent import RARAgent, Capability
+from .robot_agent import Agent, Capability
+from .agent_client import AgentClient
+from .agent import RARAgent
 from .client import RegistryClient
 
-__all__ = ["RARAgent", "Capability", "RegistryClient"]
-__version__ = "0.1.0"
+__all__ = ["Agent", "Capability", "AgentClient", "RARAgent", "RegistryClient"]
+__version__ = "0.2.0"
