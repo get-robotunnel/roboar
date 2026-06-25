@@ -30,9 +30,10 @@ type Platform struct {
 }
 
 type Connection struct {
-	TunnelEndpoint string `json:"tunnel_endpoint,omitempty"`
-	MCPEndpoint    string `json:"mcp_endpoint,omitempty"`
-	RestEndpoint   string `json:"rest_endpoint,omitempty"`
+	TunnelEndpoint string   `json:"tunnel_endpoint,omitempty"`
+	MCPEndpoint    string   `json:"mcp_endpoint,omitempty"`
+	RestEndpoint   string   `json:"rest_endpoint,omitempty"`
+	Supports       []string `json:"supports,omitempty"`
 }
 
 type Agent struct {
@@ -45,6 +46,7 @@ type Agent struct {
 	Version      string          `json:"version"`
 	Status       string          `json:"status"`
 	Visibility   string          `json:"visibility"`
+	IdentityKind string          `json:"identity_kind"`
 	Connection   Connection      `json:"connection"`
 	Capabilities []Capability    `json:"capabilities"`
 	Metadata     json.RawMessage `json:"metadata,omitempty"`

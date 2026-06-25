@@ -71,6 +71,30 @@ def cmd_platform_register(args):
     print(f"  export RAR_REGISTRY_URL={client.base}")
 
 
+def cmd_identity_create(args):
+    client = RegistryClient(resolve_registry_url(args))
+    priv = keys.load_or_create(keys.OWNER_KEY)
+    pub = keys.public_key_hex(priv)
+    body = {"public_key": pub, "display_name": args.name, "kind": "principal"}
+    res = client.expect("POST", "/identities/quick", body)
+    sess = session.load()
+    sess.update({
+        "registry_url": client.base,
+        "owner_id": res["owner_id"],
+        "agent_id": res["agent_id"],
+        "platform_id": res["platform_id"],
+        "platform_token": res["platform_token"],
+        "public_key": pub,
+    })
+    session.save(sess)
+    print(f"Identity created:")
+    print(f"  agent_id       = {res['agent_id']}")
+    print(f"  owner_id       = {res['owner_id']}")
+    print(f"  platform_id    = {res['platform_id']}")
+    print(f"  platform_token = {res['platform_token']}   <-- saved locally, shown once")
+    print(f"  keypair stored at {keys.OWNER_KEY}")
+
+
 def cmd_discover_agents(args):
     client = RegistryClient(resolve_registry_url(args))
     query = []
@@ -119,6 +143,12 @@ def build_parser() -> argparse.ArgumentParser:
     preg.add_argument("--description")
     preg.add_argument("--registry-url")
     preg.set_defaults(func=cmd_platform_register)
+
+    identity = sub.add_parser("identity", help="manage your identity").add_subparsers(dest="cmd", required=True)
+    icreate = identity.add_parser("create", help="register a principal identity (one step)")
+    icreate.add_argument("--name", required=True, help="display name for this identity, e.g. \"Russell's Laptop\"")
+    icreate.add_argument("--registry-url")
+    icreate.set_defaults(func=cmd_identity_create)
 
     discover = sub.add_parser("discover", help="discover public agents").add_subparsers(dest="cmd", required=True)
     dag = discover.add_parser("agents", help="search public agents")

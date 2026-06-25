@@ -3,8 +3,10 @@ package store
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/RussellTNY/robot-agent-registry/internal/model"
+	"github.com/jackc/pgx/v5"
 )
 
 // UpsertCapability registers or idempotently updates a capability, keyed by
@@ -47,6 +49,40 @@ func (s *Store) UpdateCapability(ctx context.Context, capabilityID string, permi
 		return ErrNotFound
 	}
 	return nil
+}
+
+// GetCapability fetches a single capability by its ID, used by the MCP tool
+// check_capability_price.
+func (s *Store) GetCapability(ctx context.Context, capabilityID string) (*model.Capability, error) {
+	var c model.Capability
+	var pricing, input, output, ros2 *string
+	err := s.Pool.QueryRow(ctx,
+		`SELECT capability_id, agent_id, name, display_name, COALESCE(description,''), interface_type,
+			permission, pricing::text, authorized_agents, input_schema::text, output_schema::text,
+			ros2_metadata::text, enabled, created_at
+		 FROM capabilities WHERE capability_id=$1`, capabilityID,
+	).Scan(&c.CapabilityID, &c.AgentID, &c.Name, &c.DisplayName, &c.Description,
+		&c.InterfaceType, &c.Permission, &pricing, &c.AuthorizedAgents, &input, &output, &ros2,
+		&c.Enabled, &c.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if pricing != nil {
+		c.Pricing = json.RawMessage(*pricing)
+	}
+	if input != nil {
+		c.InputSchema = json.RawMessage(*input)
+	}
+	if output != nil {
+		c.OutputSchema = json.RawMessage(*output)
+	}
+	if ros2 != nil {
+		c.ROS2 = json.RawMessage(*ros2)
+	}
+	return &c, nil
 }
 
 func (s *Store) DeleteCapability(ctx context.Context, capabilityID string) error {

@@ -38,7 +38,8 @@ type DiscoveredAgent struct {
 const discoverSelect = `SELECT a.agent_id, a.name, COALESCE(a.description,''), p.platform_type, o.display_name,
 	(p.last_seen_at IS NOT NULL AND p.last_seen_at > NOW() - make_interval(secs => $1)) AS online,
 	a.visibility, p.tags,
-	COALESCE(a.tunnel_endpoint,''), COALESCE(a.mcp_endpoint,''), COALESCE(a.rest_endpoint,'')
+	COALESCE(a.tunnel_endpoint,''), COALESCE(a.mcp_endpoint,''), COALESCE(a.rest_endpoint,''),
+	a.tunnel_supports
 	FROM agents a
 	JOIN platforms p ON p.platform_id = a.platform_id
 	JOIN owners o ON o.owner_id = a.owner_id`
@@ -57,7 +58,7 @@ func (s *Store) DiscoverAgents(ctx context.Context, f DiscoverFilter, offlineSec
 	}
 	onlineExpr := "(p.last_seen_at IS NOT NULL AND p.last_seen_at > NOW() - make_interval(secs => $1))"
 
-	conds := []string{"a.visibility='public'"}
+	conds := []string{"a.visibility='public'", "a.identity_kind='service'"}
 	if f.Q != "" {
 		p := add("%" + f.Q + "%")
 		conds = append(conds, fmt.Sprintf("(a.name ILIKE %s OR a.description ILIKE %s)", p, p))
@@ -133,7 +134,8 @@ func (s *Store) scanDiscovered(ctx context.Context, query string, args []interfa
 		var d DiscoveredAgent
 		if err := rows.Scan(&d.AgentID, &d.Name, &d.Description, &d.PlatformType, &d.OwnerDisplayName,
 			&d.Online, &d.Visibility, &d.Tags,
-			&d.Connection.TunnelEndpoint, &d.Connection.MCPEndpoint, &d.Connection.RestEndpoint); err != nil {
+			&d.Connection.TunnelEndpoint, &d.Connection.MCPEndpoint, &d.Connection.RestEndpoint,
+			&d.Connection.Supports); err != nil {
 			return nil, err
 		}
 		d.Capabilities = []model.Capability{}

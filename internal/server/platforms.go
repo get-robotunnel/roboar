@@ -122,10 +122,16 @@ func (s *Server) deletePlatform(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+type agentTunnelUpdate struct {
+	AgentID        string   `json:"agent_id"`
+	TunnelEndpoint string   `json:"tunnel_endpoint"`
+	TunnelSupports []string `json:"tunnel_supports"`
+}
+
 type heartbeatReq struct {
-	PublicKey      string `json:"public_key"`
-	TunnelEndpoint string `json:"tunnel_endpoint"`
-	Status         string `json:"status"`
+	PublicKey string               `json:"public_key"`
+	Status    string               `json:"status"`
+	Agents    []agentTunnelUpdate  `json:"agents"`
 }
 
 func (s *Server) heartbeat(c *gin.Context) {
@@ -136,6 +142,12 @@ func (s *Server) heartbeat(c *gin.Context) {
 	if err := s.store.Heartbeat(c, platformID, req.PublicKey); err != nil {
 		abort(c, http.StatusInternalServerError, "heartbeat failed")
 		return
+	}
+	for _, u := range req.Agents {
+		if u.AgentID == "" {
+			continue
+		}
+		_ = s.store.UpdateAgentTunnel(c, platformID, u.AgentID, u.TunnelEndpoint, u.TunnelSupports)
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

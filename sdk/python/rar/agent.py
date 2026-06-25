@@ -106,20 +106,43 @@ class RARAgent:
         """Register a config-change callback. Wiring is Phase 2 (WebSocket push)."""
         self._config_cb = cb
 
-    def heartbeat_once(self) -> None:
+    def heartbeat_once(
+        self,
+        agent_tunnels: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
+        """Send a heartbeat.
+
+        agent_tunnels, if provided, is a list of dicts with keys:
+          agent_id, tunnel_endpoint, tunnel_supports (optional list[str])
+        The registry uses these to update each agent's tunnel addressing key.
+        """
+        body: Dict[str, Any] = {
+            "public_key": keys.public_key_hex(self.priv),
+            "status": "online",
+        }
+        if agent_tunnels:
+            body["agents"] = agent_tunnels
         self.client.expect(
             "POST",
             f"/platforms/{self.platform_id}/heartbeat",
-            {"public_key": keys.public_key_hex(self.priv), "status": "online"},
+            body,
             self._auth,
         )
 
-    def start(self, interval: int = 30) -> None:
-        """Blocking heartbeat loop until stop() is called or interrupted."""
+    def start(
+        self,
+        interval: int = 30,
+        agent_tunnels: Optional[List[Dict[str, Any]]] = None,
+    ) -> None:
+        """Blocking heartbeat loop until stop() is called or interrupted.
+
+        agent_tunnels: optional per-agent tunnel info forwarded on each heartbeat.
+        See heartbeat_once() for the expected dict shape.
+        """
         self._stop.clear()
         while not self._stop.is_set():
             try:
-                self.heartbeat_once()
+                self.heartbeat_once(agent_tunnels=agent_tunnels)
             except Exception as exc:  # keep the loop alive across transient errors
                 print(f"[rar-agent] heartbeat failed: {exc}")
             self._stop.wait(interval)

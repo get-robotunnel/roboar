@@ -10,13 +10,14 @@ import (
 )
 
 type createAgentReq struct {
-	Name        string           `json:"name"`
-	Description string           `json:"description"`
-	AgentType   string           `json:"agent_type"`
-	Version     string           `json:"version"`
-	Visibility  string           `json:"visibility"`
-	Connection  model.Connection `json:"connection"`
-	Metadata    json.RawMessage  `json:"metadata"`
+	Name         string           `json:"name"`
+	Description  string           `json:"description"`
+	AgentType    string           `json:"agent_type"`
+	Version      string           `json:"version"`
+	Visibility   string           `json:"visibility"`
+	IdentityKind string           `json:"identity_kind"`
+	Connection   model.Connection `json:"connection"`
+	Metadata     json.RawMessage  `json:"metadata"`
 }
 
 func (s *Server) createAgent(c *gin.Context) {
@@ -31,17 +32,23 @@ func (s *Server) createAgent(c *gin.Context) {
 		abort(c, http.StatusBadRequest, "name, agent_type and version are required")
 		return
 	}
+	kind := orDefault(req.IdentityKind, "service")
+	visibility := orDefault(req.Visibility, "public")
+	if kind == "principal" && req.Visibility == "" {
+		visibility = "private"
+	}
 	a := &model.Agent{
-		AgentID:     ids.Agent(),
-		PlatformID:  platformID,
-		OwnerID:     ownerID,
-		Name:        req.Name,
-		Description: req.Description,
-		AgentType:   req.AgentType,
-		Version:     req.Version,
-		Visibility:  orDefault(req.Visibility, "public"),
-		Connection:  req.Connection,
-		Metadata:    req.Metadata,
+		AgentID:      ids.Agent(),
+		PlatformID:   platformID,
+		OwnerID:      ownerID,
+		Name:         req.Name,
+		Description:  req.Description,
+		AgentType:    req.AgentType,
+		Version:      req.Version,
+		Visibility:   visibility,
+		IdentityKind: kind,
+		Connection:   req.Connection,
+		Metadata:     req.Metadata,
 	}
 	if err := s.store.UpsertAgent(c, a); err != nil {
 		abort(c, http.StatusInternalServerError, "could not register agent")

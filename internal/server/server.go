@@ -35,6 +35,9 @@ func (s *Server) Run() error { return s.engine.Run(":" + s.cfg.Port) }
 func (s *Server) routes() {
 	s.engine.GET("/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
+	// MCP server — AI agent entry point (no auth; tools enforce their own access rules)
+	s.engine.POST("/mcp", s.handleMCP)
+
 	v1 := s.engine.Group("/v1")
 
 	// Owners
@@ -62,6 +65,9 @@ func (s *Server) routes() {
 	v1.POST("/agents/:agent_id/capabilities", s.platformAuthByAgent, s.createCapability)
 	v1.PATCH("/agents/:agent_id/capabilities/:capability_id", s.platformAuthByAgent, s.patchCapability)
 	v1.DELETE("/agents/:agent_id/capabilities/:capability_id", s.platformAuthByAgent, s.deleteCapability)
+
+	// Identity quick-register (no auth — public key is the identity credential)
+	v1.POST("/identities/quick", s.quickIdentity)
 
 	// Discovery (public, no auth)
 	v1.GET("/discover/agents", s.discoverAgents)
