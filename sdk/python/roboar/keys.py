@@ -1,6 +1,6 @@
 """Local Ed25519 key handling for owners and platforms.
 
-Keys are stored as raw 32-byte seeds under ~/.rar/ with 0600 permissions.
+Keys are stored as raw 32-byte seeds under ~/.roboar/ with 0600 permissions.
 """
 
 import os
@@ -9,7 +9,7 @@ from pathlib import Path
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-KEY_DIR = Path(os.path.expanduser("~/.rar"))
+KEY_DIR = Path(os.path.expanduser("~/.roboar"))
 _RAW = serialization.Encoding.Raw
 _RAW_PRIV = serialization.PrivateFormat.Raw
 _RAW_PUB = serialization.PublicFormat.Raw
@@ -48,8 +48,6 @@ def public_key_hex(priv: Ed25519PrivateKey) -> str:
 
 
 def sign_hex(priv: Ed25519PrivateKey, message: bytes) -> str:
-    """Sign *message* and return the signature as hex (matches the server's
-    VerifyEd25519, which verifies over the raw challenge string bytes)."""
     return priv.sign(message).hex()
 
 

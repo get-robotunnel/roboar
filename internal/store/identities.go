@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/ids"
+	"github.com/get-robotunnel/roboar/internal/ids"
 )
 
 // QuickIdentityResult is returned by QuickIdentity.

@@ -5,10 +5,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/auth"
-	"github.com/RussellTNY/robot-agent-registry/internal/config"
-	"github.com/RussellTNY/robot-agent-registry/internal/server"
-	"github.com/RussellTNY/robot-agent-registry/internal/store"
+	"github.com/get-robotunnel/roboar/internal/auth"
+	"github.com/get-robotunnel/roboar/internal/config"
+	"github.com/get-robotunnel/roboar/internal/server"
+	"github.com/get-robotunnel/roboar/internal/store"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module github.com/RussellTNY/robot-agent-registry
+module github.com/get-robotunnel/roboar
 
 go 1.25.0
 

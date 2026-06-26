@@ -1,61 +1,32 @@
-"""Platform-side agent SDK (spec §4): register agents/capabilities and heartbeat."""
+"""Platform-managed agent SDK: register agents/capabilities and heartbeat."""
 
 import threading
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from . import keys
 from .client import DEFAULT_BASE_URL, RegistryClient
+from .robot_agent import Capability
 
 
-@dataclass
-class Capability:
-    name: str
-    display_name: str
-    interface_type: str
-    description: str = ""
-    permission: str = "public"
-    pricing: Optional[dict] = None
-    input_schema: Optional[dict] = None
-    output_schema: Optional[dict] = None
-    ros2: Optional[dict] = None
-    enabled: bool = True
-
-    def to_body(self) -> Dict[str, Any]:
-        body: Dict[str, Any] = {
-            "name": self.name,
-            "display_name": self.display_name,
-            "interface_type": self.interface_type,
-            "description": self.description,
-            "permission": self.permission,
-            "enabled": self.enabled,
-        }
-        if self.pricing is not None:
-            body["pricing"] = self.pricing
-        if self.input_schema is not None:
-            body["input_schema"] = self.input_schema
-        if self.output_schema is not None:
-            body["output_schema"] = self.output_schema
-        if self.ros2 is not None:
-            body["ros2"] = self.ros2
-        return body
-
-
-@dataclass
 class AgentHandle:
-    agent_id: str
-    _client: RegistryClient
-    _auth: str
+    def __init__(self, agent_id: str, _client: RegistryClient, _auth: str) -> None:
+        self.agent_id = agent_id
+        self._client = _client
+        self._auth = _auth
 
     def register_capability(self, cap: Capability) -> dict:
         return self._client.expect(
-            "POST", f"/agents/{self.agent_id}/capabilities", cap.to_body(), self._auth
+            "POST", f"/agents/{self.agent_id}/capabilities", cap.to_register_body(), self._auth
         )
 
 
-class RARAgent:
-    """Connects a platform to the registry: registers agents, then heartbeats."""
+class PlatformAgent:
+    """Connects a platform to the registry: registers agents, then heartbeats.
+
+    For use when a human operator owns the platform and provisions agents
+    on behalf of robots (as opposed to self-registering agents using Agent).
+    """
 
     def __init__(
         self,
@@ -110,12 +81,6 @@ class RARAgent:
         self,
         agent_tunnels: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
-        """Send a heartbeat.
-
-        agent_tunnels, if provided, is a list of dicts with keys:
-          agent_id, tunnel_endpoint, tunnel_supports (optional list[str])
-        The registry uses these to update each agent's tunnel addressing key.
-        """
         body: Dict[str, Any] = {
             "public_key": keys.public_key_hex(self.priv),
             "status": "online",
@@ -134,17 +99,13 @@ class RARAgent:
         interval: int = 30,
         agent_tunnels: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
-        """Blocking heartbeat loop until stop() is called or interrupted.
-
-        agent_tunnels: optional per-agent tunnel info forwarded on each heartbeat.
-        See heartbeat_once() for the expected dict shape.
-        """
+        """Blocking heartbeat loop until stop() is called or interrupted."""
         self._stop.clear()
         while not self._stop.is_set():
             try:
                 self.heartbeat_once(agent_tunnels=agent_tunnels)
-            except Exception as exc:  # keep the loop alive across transient errors
-                print(f"[rar-agent] heartbeat failed: {exc}")
+            except Exception as exc:
+                print(f"[roboar] heartbeat failed: {exc}")
             self._stop.wait(interval)
 
     def stop(self) -> None:
@@ -152,12 +113,10 @@ class RARAgent:
 
 
 def operations_preset() -> List[Capability]:
-    """Baseline capabilities for `rar-agent start --preset operations` (spec §5)."""
+    """Baseline capabilities for `roboar agent start --preset operations`."""
     return [
         Capability(
             name="get_system_status",
-            display_name="Get System Status",
-            interface_type="mcp_tool",
             description="Returns CPU, memory, and robot operational status",
             permission="public",
             input_schema={"type": "object", "properties": {}},
@@ -172,15 +131,11 @@ def operations_preset() -> List[Capability]:
         ),
         Capability(
             name="execute_command",
-            display_name="Execute Command",
-            interface_type="mcp_tool",
             description="Run a shell command on the robot host",
             permission="owner_only",
         ),
         Capability(
             name="reboot",
-            display_name="Reboot Robot",
-            interface_type="mcp_tool",
             description="Reboot the robot host",
             permission="owner_only",
         ),

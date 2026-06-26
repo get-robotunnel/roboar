@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	rardb "github.com/RussellTNY/robot-agent-registry/db"
+	rardb "github.com/get-robotunnel/roboar/db"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

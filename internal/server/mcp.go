@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/auth"
-	"github.com/RussellTNY/robot-agent-registry/internal/ids"
-	"github.com/RussellTNY/robot-agent-registry/internal/store"
+	"github.com/get-robotunnel/roboar/internal/auth"
+	"github.com/get-robotunnel/roboar/internal/ids"
+	"github.com/get-robotunnel/roboar/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
@@ -136,7 +136,7 @@ func (s *Server) handleMCP(c *gin.Context) {
 		result = map[string]any{
 			"protocolVersion": "2024-11-05",
 			"capabilities":    map[string]any{"tools": map[string]any{}},
-			"serverInfo":      map[string]any{"name": "robot-agent-registry", "version": "1.0"},
+			"serverInfo":      map[string]any{"name": "roboar", "version": "1.0"},
 		}
 	case "tools/list":
 		result = map[string]any{"tools": mcpToolList}

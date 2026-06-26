@@ -19,7 +19,7 @@ The script is self-contained and cleans up after itself. It:
 2. Builds and runs the server on `APIPORT` (8090), applying migrations on boot.
 3. Installs the Python CLI (`./sdk/python`) into a temp venv.
 4. Walks `rar auth register` → `rar auth login` → `rar platform register` →
-   `rar-agent start --preset operations` → `rar discover agents --online`.
+   `roboar agent start --preset operations` → `roboar discover agents --online`.
 5. Asserts the agent and its `get_system_status` capability are discoverable
    online, prints `PASS`, and exits non-zero on any failure.
 

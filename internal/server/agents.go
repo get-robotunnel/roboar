@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/ids"
-	"github.com/RussellTNY/robot-agent-registry/internal/model"
+	"github.com/get-robotunnel/roboar/internal/ids"
+	"github.com/get-robotunnel/roboar/internal/model"
 	"github.com/gin-gonic/gin"
 )
 

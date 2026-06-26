@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/model"
+	"github.com/get-robotunnel/roboar/internal/model"
 )
 
 // DiscoverFilter holds the optional query parameters of GET /discover/agents.

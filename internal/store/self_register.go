@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/ids"
-	"github.com/RussellTNY/robot-agent-registry/internal/model"
+	"github.com/get-robotunnel/roboar/internal/ids"
+	"github.com/get-robotunnel/roboar/internal/model"
 	"github.com/jackc/pgx/v5"
 )
 

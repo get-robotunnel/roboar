@@ -3,8 +3,8 @@ package server
 import (
 	"net/http"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/auth"
-	"github.com/RussellTNY/robot-agent-registry/internal/ids"
+	"github.com/get-robotunnel/roboar/internal/auth"
+	"github.com/get-robotunnel/roboar/internal/ids"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,7 +14,7 @@ type quickIdentityReq struct {
 	Kind        string `json:"kind"`
 }
 
-// quickIdentity handles POST /v1/identities/quick.
+// quickIdentity handles POST /v1/identities.
 //
 // One-call registration path for human / CLI identities: it creates (or
 // retrieves) an owner by public key, creates a "personal" platform, and

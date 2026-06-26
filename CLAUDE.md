@@ -34,8 +34,8 @@ internal/discovery     public GET /discover/* (no auth)
 internal/store         pgxpool + embedded migration runner
 internal/ids           nanoid prefixes usr_/plt_/agt_/cap_
 db/migrations/*.sql    schema (embedded, applied in order on boot)
-sdk/python             rar-agent (platform-side SDK)
-cli                    rar-cli (owner-side CLI)
+sdk/python             roboar (SDK + unified CLI)
+
 ```
 
 ## Conventions

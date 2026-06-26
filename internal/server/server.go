@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/auth"
-	"github.com/RussellTNY/robot-agent-registry/internal/config"
-	"github.com/RussellTNY/robot-agent-registry/internal/store"
+	"github.com/get-robotunnel/roboar/internal/auth"
+	"github.com/get-robotunnel/roboar/internal/config"
+	"github.com/get-robotunnel/roboar/internal/store"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -68,12 +68,12 @@ func (s *Server) routes() {
 
 	// Agent self-registration (spec §1): no platform token needed — agent's Ed25519
 	// key is its identity. Heartbeat uses Agent-Signature; claim uses owner Ed25519.
-	v1.POST("/agents/self-register", s.selfRegister)
+	v1.POST("/agents", s.selfRegister)
 	v1.POST("/agents/:agent_id/heartbeat", s.agentSigAuth, s.agentHeartbeat)
 	v1.POST("/agents/:agent_id/claim", s.claimAgent)
 
-	// Identity quick-register (no auth — public key is the identity credential)
-	v1.POST("/identities/quick", s.quickIdentity)
+	// Identity register (no auth — public key is the identity credential)
+	v1.POST("/identities", s.quickIdentity)
 
 	// Discovery (public, no auth)
 	v1.GET("/discover/agents", s.discoverAgents)

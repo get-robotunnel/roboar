@@ -3,7 +3,7 @@
 **Identity, discovery, and capability registry for robot agents** — so any agent on any machine can find and call any robot on the internet, without prior setup.
 
 ```python
-from rar import Agent, Capability
+from roboar import Agent, Capability
 import asyncio
 
 agent = Agent(
@@ -20,7 +20,7 @@ async def get_scan(params):
     return {"pcd_data": "<base64 encoded PCD>"}
 
 asyncio.run(agent.start())
-# ✓ keypair generated at ~/.rar/agent_key
+# ✓ keypair generated at ~/.roboar/agent_key
 # ✓ registered at reg.robotunnel.io — agent_id = agt_xxxxx
 # ✓ wallet address derived from public key (receive x402 payments immediately)
 # ✓ MCP server online at :11412
@@ -51,7 +51,7 @@ RAR is infrastructure, not a product UI. Its primary interface is a REST API; it
 The `Agent` class handles everything: keypair generation, registration, MCP server, heartbeat.
 
 ```python
-from rar import Agent, Capability
+from roboar import Agent, Capability
 import asyncio
 
 agent = Agent(name="my-robot", capabilities=[Capability("ping", "Returns pong")])
@@ -67,8 +67,8 @@ Your robot is now online and discoverable. It also has a deterministic EVM walle
 ### 2. Human / CLI identity (1 command)
 
 ```bash
-pip install rar-agent
-rar identity create --name "Russell's Laptop"
+pip install roboar
+roboar identity create --name "Russell's Laptop"
 # Generates Ed25519 keypair, registers a principal identity
 # → agent_id + owner_id, stored locally
 ```
@@ -142,7 +142,7 @@ curl "https://reg.robotunnel.io/v1/discover/agents/agt_xxx"
 ## Calling a remote agent
 
 ```python
-from rar import AgentClient
+from roboar import AgentClient
 import asyncio
 
 async def main():
@@ -162,7 +162,7 @@ Robot-to-robot calls work the same way — no LLM needed. The tunnel handles NAT
 By default, a self-registered agent is `unclaimed`: it runs, is discoverable, and can receive payments — but no human can withdraw the funds yet. Claim it to unlock fund management and policy control:
 
 ```bash
-rar claim --agent-id agt_xxx
+roboar identity claim --agent-id agt_xxx
 # Signs the agent_id with your local private key
 # → you are now the verified owner
 # → can set capability pricing, visibility, withdraw wallet balance
@@ -190,8 +190,8 @@ RAR needs only one binary and one Postgres database.
 
 ```bash
 # 1. Database
-createdb rar
-export DATABASE_URL="postgres://localhost:5432/rar?sslmode=disable"
+createdb roboar
+export DATABASE_URL="postgres://localhost:5432/roboar?sslmode=disable"
 export JWT_SIGNING_KEY="$(openssl rand -hex 32)"
 
 # 2. Run (migrations apply automatically on boot)
@@ -211,7 +211,7 @@ agent = Agent(name="my-robot", registry_url="http://localhost:8090/v1", ...)
 Or the CLI:
 
 ```bash
-rar --registry http://localhost:8090/v1 identity create --name "My Laptop"
+roboar --registry http://localhost:8090/v1 identity create --name "My Laptop"
 ```
 
 ---
@@ -227,13 +227,12 @@ internal/
   model/                Entity types
   ids/                  Prefixed nanoid helpers (usr_/plt_/agt_/cap_)
 db/migrations/          SQL schema (embedded, applied in order on boot)
-sdk/python/rar/
-  robot_agent.py        Agent class — self-register, MCP server, heartbeat
+sdk/python/roboar/
+  robot_agent.py        Agent, Capability — self-register, MCP server, heartbeat
   agent_client.py       AgentClient — call remote agents
-  agent.py              RARAgent — managed platform SDK (owner-provisioned)
-  keys.py               Ed25519 keypair management (~/.rar/)
-  cli.py                rar CLI (owner side)
-  agent_cli.py          rar-agent CLI (platform side)
+  agent.py              PlatformAgent — managed platform SDK (owner-provisioned)
+  keys.py               Ed25519 keypair management (~/.roboar/)
+  cli.py                roboar CLI (unified: auth, platform, identity, discover, agent)
 ```
 
 ## API reference
@@ -242,7 +241,7 @@ Base URL: `https://reg.robotunnel.io/v1`
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/agents/self-register` | none | Self-register by Ed25519 public key (idempotent) |
+| `POST` | `/agents` | none | Self-register by Ed25519 public key (idempotent) |
 | `POST` | `/agents/:id/heartbeat` | Agent-Signature | Update online status and connection endpoints |
 | `POST` | `/agents/:id/claim` | Owner Ed25519 sig | Bind agent to human owner |
 | `GET` | `/discover/agents` | none | Full-text search across public agents |
@@ -264,7 +263,7 @@ Base URL: `https://reg.robotunnel.io/v1`
 | MCP server (registry discovery tools) | ✅ |
 | Owner registration + Ed25519 login | ✅ |
 | Public Discovery API | ✅ |
-| Python SDK (`Agent`, `AgentClient`) | ✅ |
+| Python SDK (`Agent`, `Capability`, `AgentClient`, `PlatformAgent`) | ✅ |
 | x402 payment middleware (MCP) | ✅ basic |
 | Owner claim flow | ✅ |
 | Tunnel MCP proxy (`/mcp/:agent_id`) | ✅ direct |

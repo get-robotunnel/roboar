@@ -1,8 +1,7 @@
-"""Self-registering robot agent SDK (spec §1-2): Agent class, Capability, and
-AgentClient.
+"""Self-registering robot agent SDK (spec §1-2): Agent and Capability.
 
 Usage:
-    from rar import Agent, Capability
+    from roboar import Agent, Capability
 
     agent = Agent(
         name="lidar-agent",
@@ -37,7 +36,7 @@ DEFAULT_MCP_PORT = 11412
 
 @dataclass
 class Capability:
-    """Describes a single capability exposed by an Agent as an MCP tool."""
+    """A single capability exposed by an Agent as an MCP tool."""
 
     name: str
     description: str = ""
@@ -47,6 +46,8 @@ class Capability:
     display_name: Optional[str] = None
     input_schema: Optional[dict] = None
     output_schema: Optional[dict] = None
+    ros2: Optional[dict] = None
+    enabled: bool = True
 
     def __post_init__(self) -> None:
         if self.display_name is None:
@@ -59,9 +60,16 @@ class Capability:
             "description": self.description,
             "interface_type": self.interface_type,
             "permission": self.permission,
+            "enabled": self.enabled,
         }
         if self.pricing is not None:
             body["pricing"] = self.pricing
+        if self.input_schema is not None:
+            body["input_schema"] = self.input_schema
+        if self.output_schema is not None:
+            body["output_schema"] = self.output_schema
+        if self.ros2 is not None:
+            body["ros2"] = self.ros2
         return body
 
     def to_mcp_tool(self) -> Dict[str, Any]:
@@ -82,7 +90,7 @@ class Agent:
     """A self-registering robot agent (spec §1.2).
 
     On ``start()`` the agent:
-    1. Loads or generates an Ed25519 keypair at ``key_path`` (default ~/.rar/agent_key).
+    1. Loads or generates an Ed25519 keypair at ``key_path`` (default ~/.roboar/agent_key).
     2. Self-registers with the registry (idempotent — safe to restart).
     3. Starts an MCP server on ``mcp_port`` (default 11412).
     4. Loops heartbeats every ``heartbeat_interval`` seconds.
@@ -123,7 +131,7 @@ class Agent:
     # ── decorator ──────────────────────────────────────────────────────────
 
     def capability(self, name: str) -> Callable:
-        """Bind a coroutine function as the implementation for capability *name*.
+        """Bind a coroutine as the implementation for capability *name*.
 
         The coroutine receives ``params: dict`` and must return a ``dict``.
         """
@@ -136,15 +144,10 @@ class Agent:
 
     async def start(self) -> None:
         """Complete steps 1-6 from spec §1.2, then block until interrupted."""
-        # Step 1: keypair
         self.priv = keys.load_or_create(self.key_path)
         pub_hex = keys.public_key_hex(self.priv)
-
-        # Step 2-4: register, get agent_id + wallet_address
         await asyncio.get_event_loop().run_in_executor(None, self._register, pub_hex)
-
-        # Step 5-6: MCP server + heartbeat (concurrent)
-        print(f"[rar-agent] {self.name} online  agent_id={self.agent_id}  wallet={self.wallet_address}")
+        print(f"[roboar] {self.name} online  agent_id={self.agent_id}  wallet={self.wallet_address}")
         await asyncio.gather(
             self._serve_mcp(),
             self._heartbeat_loop(),
@@ -159,7 +162,7 @@ class Agent:
             "version": self.version,
             "capabilities": [c.to_register_body() for c in self.capabilities],
         }
-        resp = self._client.expect("POST", "/agents/self-register", body)
+        resp = self._client.expect("POST", "/agents", body)
         self.agent_id = resp["agent_id"]
         self.wallet_address = resp.get("wallet_address", "")
 
@@ -170,7 +173,7 @@ class Agent:
             try:
                 await asyncio.get_event_loop().run_in_executor(None, self._send_heartbeat)
             except Exception as exc:
-                print(f"[rar-agent] heartbeat failed: {exc}")
+                print(f"[roboar] heartbeat failed: {exc}")
             await asyncio.sleep(self.heartbeat_interval)
 
     def _send_heartbeat(self) -> None:
@@ -216,7 +219,7 @@ class Agent:
             self._handle_http, self.mcp_host, self.mcp_port
         )
         addr = server.sockets[0].getsockname()
-        print(f"[rar-agent] MCP server listening on {addr[0]}:{addr[1]}")
+        print(f"[roboar] MCP server listening on {addr[0]}:{addr[1]}")
         async with server:
             await server.serve_forever()
 
@@ -224,7 +227,6 @@ class Agent:
         self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
         try:
-            # Read request line
             line = await reader.readline()
             if not line:
                 return
@@ -233,7 +235,6 @@ class Agent:
                 return
             method = parts[0].upper()
 
-            # Read headers
             hdrs: Dict[str, str] = {}
             while True:
                 hline = await reader.readline()
@@ -244,7 +245,6 @@ class Agent:
                     k, v = decoded.split(":", 1)
                     hdrs[k.strip().lower()] = v.strip()
 
-            # Read body
             content_length = int(hdrs.get("content-length", 0))
             body = await reader.readexactly(content_length) if content_length > 0 else b""
 
@@ -278,7 +278,6 @@ class Agent:
         rpc_id = req.get("id")
         method = req.get("method", "")
 
-        # Notifications (no id) — accept silently.
         if rpc_id is None and method:
             return 202, b""
 
@@ -308,7 +307,6 @@ class Agent:
         if cap is None:
             return 200, _rpc_error(rpc_id, -32601, f"unknown tool: {tool_name}")
 
-        # Permission middleware
         perm_result = await self._check_permission(cap, hdrs)
         if perm_result is not None:
             return perm_result

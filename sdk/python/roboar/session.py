@@ -1,4 +1,4 @@
-"""Owner CLI session persistence (~/.rar/session.json)."""
+"""Owner CLI session persistence (~/.roboar/session.json)."""
 
 import json
 import os

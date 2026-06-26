@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/store"
+	"github.com/get-robotunnel/roboar/internal/store"
 	"github.com/gin-gonic/gin"
 )
 

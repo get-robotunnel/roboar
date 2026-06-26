@@ -4,10 +4,10 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/auth"
-	"github.com/RussellTNY/robot-agent-registry/internal/ids"
-	"github.com/RussellTNY/robot-agent-registry/internal/model"
-	"github.com/RussellTNY/robot-agent-registry/internal/store"
+	"github.com/get-robotunnel/roboar/internal/auth"
+	"github.com/get-robotunnel/roboar/internal/ids"
+	"github.com/get-robotunnel/roboar/internal/model"
+	"github.com/get-robotunnel/roboar/internal/store"
 	"github.com/gin-gonic/gin"
 )
 

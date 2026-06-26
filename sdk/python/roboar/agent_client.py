@@ -48,7 +48,6 @@ class AgentClient:
         status, payload = await loop.run_in_executor(None, self._post, body, {})
 
         if status == 402:
-            # x402 payment required — stub: raise with payment terms so caller can act.
             raise AgentClientError(402, payload)
 
         if status not in (200, 201):
@@ -59,7 +58,6 @@ class AgentClient:
             raise AgentClientError(-1, err)
 
         result = (payload or {}).get("result", {})
-        # Unwrap MCP content block if present.
         content = result.get("content") if isinstance(result, dict) else None
         if content and isinstance(content, list) and content[0].get("type") == "text":
             text = content[0].get("text", "")
@@ -79,7 +77,7 @@ class AgentClient:
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "rar-agent-client", "version": "0.1"},
+                "clientInfo": {"name": "roboar-client", "version": "0.1"},
             },
         }).encode()
         loop = asyncio.get_event_loop()

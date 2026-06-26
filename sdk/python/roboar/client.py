@@ -1,11 +1,12 @@
 """Minimal HTTP client over the registry API (stdlib only)."""
 
 import json
+import os
 import urllib.error
 import urllib.request
 from typing import Any, Optional, Tuple
 
-DEFAULT_BASE_URL = "https://reg.robotunnel.io/v1"
+DEFAULT_BASE_URL = os.environ.get("ROBOAR_REGISTRY_URL", "https://reg.robotunnel.io/v1")
 
 
 class RegistryError(Exception):

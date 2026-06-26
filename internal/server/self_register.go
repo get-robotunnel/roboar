@@ -6,13 +6,13 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/RussellTNY/robot-agent-registry/internal/auth"
-	"github.com/RussellTNY/robot-agent-registry/internal/model"
-	"github.com/RussellTNY/robot-agent-registry/internal/store"
+	"github.com/get-robotunnel/roboar/internal/auth"
+	"github.com/get-robotunnel/roboar/internal/model"
+	"github.com/get-robotunnel/roboar/internal/store"
 	"github.com/gin-gonic/gin"
 )
 
-// ── POST /v1/agents/self-register ────────────────────────────────────────────
+// ── POST /v1/agents ──────────────────────────────────────────────────────────
 
 type selfRegisterCapability struct {
 	Name          string          `json:"name"`
@@ -32,7 +32,7 @@ type selfRegisterReq struct {
 	Capabilities []selfRegisterCapability `json:"capabilities"`
 }
 
-// selfRegister handles POST /v1/agents/self-register (no auth — public key is
+// selfRegister handles POST /v1/agents (no auth — public key is
 // the identity credential). The endpoint is idempotent: sending the same public
 // key again returns the existing agent_id without creating a new record.
 func (s *Server) selfRegister(c *gin.Context) {
