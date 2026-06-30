@@ -16,3 +16,4 @@ venv/
 
 # Local env
 .env
+.ssh/
