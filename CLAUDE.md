@@ -61,9 +61,22 @@ Required env: `DATABASE_URL`, `JWT_SIGNING_KEY`. Optional: `PORT` (default 8090)
 
 ## Deploy
 
-Target `reg.robotunnel.io` on the shared VPS, port 8090, behind Caddy, systemd
-unit, separate Supabase/Postgres project from Operations. See `deploy/` and the
-`deploy-registry` skill. Migrations apply automatically on startup.
+**Live** at `reg.robotunnel.io` (port 8090, Caddy auto-TLS) on the shared VPS
+`92.5.43.70` (Oracle Linux 9.7, **aarch64**; SSH `ssh -i .ssh/vps.key opc@92.5.43.70`).
+Runs as systemd unit `robot-agent-registry` from `/opt/robot-agent-registry`;
+source checkout at `/opt/src/roboar`, built with `/usr/local/go/bin/go build ./cmd/registry`.
+Migrations apply automatically on startup.
+
+Storage is **native Postgres on the box** (db `roboar`, role `roboar`, localhost
+md5) — NOT Supabase. `DATABASE_URL` is a `postgres://…@127.0.0.1:5432/roboar` DSN
+in `/opt/robot-agent-registry/config/.env` (chmod 600).
+
+Owner JWTs are EdDSA-signed; the Ed25519 key is derived from `JWT_SIGNING_KEY` and
+published at `/v1/.well-known/jwks.json` so agents verify owner tokens locally.
+
+> ⚠️ `deploy/.env` is committed with **live Supabase keys + a JWT_SIGNING_KEY** in a
+> PUBLIC repo. The live box uses freshly generated secrets, but those committed
+> values are compromised — rotate the Supabase keys and `git rm --cached deploy/.env`.
 
 ## Phase boundaries (don't implement ahead of the milestone)
 
