@@ -160,14 +160,15 @@ func (s *Server) agentHeartbeat(c *gin.Context) {
 		abort(c, http.StatusBadRequest, "invalid body")
 		return
 	}
-	if err := s.store.AgentHeartbeat(c, agentID, req.TunnelEndpoint, req.MCPEndpoint); errors.Is(err, store.ErrNotFound) {
+	ownerID, err := s.store.AgentHeartbeat(c, agentID, req.TunnelEndpoint, req.MCPEndpoint)
+	if errors.Is(err, store.ErrNotFound) {
 		abort(c, http.StatusNotFound, "agent not found")
 		return
 	} else if err != nil {
 		abort(c, http.StatusInternalServerError, "heartbeat failed")
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"ok": true})
+	c.JSON(http.StatusOK, gin.H{"ok": true, "owner_id": ownerID})
 }
 
 // ── POST /v1/agents/:agent_id/claim ──────────────────────────────────────────

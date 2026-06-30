@@ -137,28 +137,32 @@ func (s *Store) SelfRegister(ctx context.Context, req SelfRegisterRequest, walle
 
 // AgentHeartbeat updates the heartbeat timestamp on the agent's auto-platform
 // and refreshes the mcp_endpoint and tunnel_endpoint on the agent record.
-func (s *Store) AgentHeartbeat(ctx context.Context, agentID, tunnelEndpoint, mcpEndpoint string) error {
+// AgentHeartbeat updates liveness/connection info and returns the agent's
+// current owner_id. The owner_id changes when a human claims a previously
+// self-registered agent, so returning it here lets the agent refresh its notion
+// of who the owner is on every heartbeat (used for owner_only enforcement).
+func (s *Store) AgentHeartbeat(ctx context.Context, agentID, tunnelEndpoint, mcpEndpoint string) (string, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer tx.Rollback(ctx)
 
-	var platformID string
+	var platformID, ownerID string
 	if err := tx.QueryRow(ctx,
-		`SELECT platform_id FROM agents WHERE agent_id=$1`, agentID,
-	).Scan(&platformID); err != nil {
+		`SELECT platform_id, owner_id FROM agents WHERE agent_id=$1`, agentID,
+	).Scan(&platformID, &ownerID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ErrNotFound
+			return "", ErrNotFound
 		}
-		return err
+		return "", err
 	}
 
 	if _, err := tx.Exec(ctx,
 		`UPDATE platforms SET last_seen_at=NOW(), online=TRUE WHERE platform_id=$1`,
 		platformID,
 	); err != nil {
-		return err
+		return "", err
 	}
 	if _, err := tx.Exec(ctx,
 		`UPDATE agents SET
@@ -168,9 +172,9 @@ func (s *Store) AgentHeartbeat(ctx context.Context, agentID, tunnelEndpoint, mcp
 		 WHERE agent_id=$1`,
 		agentID, tunnelEndpoint, mcpEndpoint,
 	); err != nil {
-		return err
+		return "", err
 	}
-	return tx.Commit(ctx)
+	return ownerID, tx.Commit(ctx)
 }
 
 // GetAgentPublicKey returns the Ed25519 public key for an agent. Used by

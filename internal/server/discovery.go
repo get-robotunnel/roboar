@@ -40,6 +40,13 @@ func (s *Server) discoverAgents(c *gin.Context) {
 	})
 }
 
+// jwks publishes the registry's owner-JWT verification key (Ed25519) so agents
+// can verify owner JWTs locally without contacting the registry per request.
+func (s *Server) jwks(c *gin.Context) {
+	c.Header("Cache-Control", "public, max-age=3600")
+	c.JSON(http.StatusOK, gin.H{"keys": []map[string]string{s.auth.PublicJWK()}})
+}
+
 func (s *Server) discoverAgent(c *gin.Context) {
 	a, err := s.store.GetDiscoverAgent(c, c.Param("agent_id"), s.cfg.OfflineAfterSecs)
 	if err != nil {

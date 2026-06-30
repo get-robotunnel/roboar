@@ -35,10 +35,16 @@ func (s *Server) Run() error { return s.engine.Run(":" + s.cfg.Port) }
 func (s *Server) routes() {
 	s.engine.GET("/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
+	// JWKS — public Ed25519 key for verifying owner JWTs locally (no auth).
+	// Served at both the root and under /v1 because agents derive the URL from
+	// their REGISTRY_URL (which already includes the /v1 prefix).
+	s.engine.GET("/.well-known/jwks.json", s.jwks)
+
 	// MCP server — AI agent entry point (no auth; tools enforce their own access rules)
 	s.engine.POST("/mcp", s.handleMCP)
 
 	v1 := s.engine.Group("/v1")
+	v1.GET("/.well-known/jwks.json", s.jwks)
 
 	// Owners
 	v1.POST("/owners", s.createOwner)

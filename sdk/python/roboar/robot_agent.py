@@ -108,6 +108,7 @@ class Agent:
         mcp_port: int = DEFAULT_MCP_PORT,
         mcp_host: str = "0.0.0.0",
         heartbeat_interval: int = 30,
+        tunnel_endpoint: str = "",
     ) -> None:
         self.name = name
         self.description = description
@@ -119,6 +120,9 @@ class Agent:
         self.mcp_port = mcp_port
         self.mcp_host = mcp_host
         self.heartbeat_interval = heartbeat_interval
+        # Reachable tunnel endpoint advertised to the registry. Empty until a
+        # tunnel bridge marks the agent reachable; may be set after start().
+        self.tunnel_endpoint = tunnel_endpoint
 
         self._handlers: Dict[str, Callable] = {}
         self._client = RegistryClient(registry_url)
@@ -126,6 +130,9 @@ class Agent:
         # Set after start():
         self.agent_id: Optional[str] = None
         self.wallet_address: Optional[str] = None
+        # Current owner of this agent. Set from the self-register response and
+        # refreshed on every heartbeat (it changes when a human claims the agent).
+        self.owner_id: Optional[str] = None
         self.priv = None
 
     # ── decorator ──────────────────────────────────────────────────────────
@@ -148,10 +155,24 @@ class Agent:
         pub_hex = keys.public_key_hex(self.priv)
         await asyncio.get_event_loop().run_in_executor(None, self._register, pub_hex)
         print(f"[roboar] {self.name} online  agent_id={self.agent_id}  wallet={self.wallet_address}")
+        # Post-registration hook: agent_id/owner_id are now known. Subclasses use
+        # this to wire up tunnel bridging, middleware, etc., before serving.
+        await self._on_registered()
         await asyncio.gather(
             self._serve_mcp(),
             self._heartbeat_loop(),
+            *self._extra_tasks(),
         )
+
+    async def _on_registered(self) -> None:
+        """Hook called once after self-registration, before serving. No-op by default."""
+
+    def _extra_tasks(self) -> List[Any]:
+        """Extra coroutines to run concurrently with the MCP server and heartbeat.
+
+        Subclasses override to add long-running tasks (e.g. a tunnel bridge).
+        """
+        return []
 
     def _register(self, pub_hex: str) -> None:
         body = {
@@ -165,6 +186,7 @@ class Agent:
         resp = self._client.expect("POST", "/agents", body)
         self.agent_id = resp["agent_id"]
         self.wallet_address = resp.get("wallet_address", "")
+        self.owner_id = resp.get("owner_id") or None
 
     # ── heartbeat ──────────────────────────────────────────────────────────
 
@@ -180,7 +202,7 @@ class Agent:
         mcp_ep = f"http://127.0.0.1:{self.mcp_port}"
         body: Dict[str, Any] = {
             "status": "online",
-            "tunnel_endpoint": "",
+            "tunnel_endpoint": self.tunnel_endpoint,
             "mcp_endpoint": mcp_ep,
         }
         body_bytes = json.dumps(body).encode()
@@ -194,8 +216,12 @@ class Agent:
         for k, v in headers.items():
             req.add_header(k, v)
         try:
-            with urllib.request.urlopen(req) as _:
-                pass
+            with urllib.request.urlopen(req) as resp:
+                data = json.loads(resp.read() or b"{}")
+                # Refresh owner_id: it changes when a human claims the agent.
+                owner_id = data.get("owner_id")
+                if owner_id:
+                    self.owner_id = owner_id
         except urllib.error.HTTPError as exc:
             raise RuntimeError(f"heartbeat HTTP {exc.code}") from exc
 

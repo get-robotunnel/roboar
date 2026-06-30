@@ -6,6 +6,8 @@ package auth
 import (
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"sync"
@@ -29,8 +31,15 @@ const (
 )
 
 // Manager issues and verifies credentials. It is safe for concurrent use.
+//
+// Owner JWTs are signed with EdDSA (Ed25519) so that any party — including
+// robot-side agents that never contact the registry per request — can verify a
+// token locally with only the registry's public key, published at
+// /.well-known/jwks.json. The signing key is derived deterministically from the
+// configured JWT_SIGNING_KEY, so no extra configuration is required.
 type Manager struct {
-	signingKey []byte
+	signingPriv ed25519.PrivateKey
+	signingPub  ed25519.PublicKey
 
 	mu         sync.Mutex
 	challenges map[string]pendingChallenge // keyed by owner public key (hex)
@@ -42,9 +51,12 @@ type pendingChallenge struct {
 }
 
 func NewManager(signingKey string) *Manager {
+	seed := sha256.Sum256([]byte(signingKey))
+	priv := ed25519.NewKeyFromSeed(seed[:])
 	return &Manager{
-		signingKey: []byte(signingKey),
-		challenges: make(map[string]pendingChallenge),
+		signingPriv: priv,
+		signingPub:  priv.Public().(ed25519.PublicKey),
+		challenges:  make(map[string]pendingChallenge),
 	}
 }
 
@@ -119,7 +131,7 @@ func decodePublicKey(publicKeyHex string) (ed25519.PublicKey, error) {
 	return ed25519.PublicKey(raw), nil
 }
 
-// IssueJWT returns a signed access token (HS256) for the owner, valid 24h.
+// IssueJWT returns a signed access token (EdDSA) for the owner, valid 24h.
 func (m *Manager) IssueJWT(ownerID string) (string, error) {
 	now := time.Now()
 	claims := jwt.RegisteredClaims{
@@ -127,22 +139,36 @@ func (m *Manager) IssueJWT(ownerID string) (string, error) {
 		IssuedAt:  jwt.NewNumericDate(now),
 		ExpiresAt: jwt.NewNumericDate(now.Add(accessTTL)),
 	}
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(m.signingKey)
+	return jwt.NewWithClaims(jwt.SigningMethodEdDSA, claims).SignedString(m.signingPriv)
 }
 
 // ParseJWT validates an access token and returns the owner id (subject).
 func (m *Manager) ParseJWT(token string) (string, error) {
 	claims := &jwt.RegisteredClaims{}
 	parsed, err := jwt.ParseWithClaims(token, claims, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		if _, ok := t.Method.(*jwt.SigningMethodEd25519); !ok {
 			return nil, errors.New("unexpected signing method")
 		}
-		return m.signingKey, nil
+		return m.signingPub, nil
 	})
 	if err != nil || !parsed.Valid {
 		return "", errors.New("invalid token")
 	}
 	return claims.Subject, nil
+}
+
+// PublicJWK returns the registry's owner-JWT verification key as a JWK (RFC 8037
+// OKP / Ed25519). Published at /.well-known/jwks.json so agents can verify owner
+// JWTs locally.
+func (m *Manager) PublicJWK() map[string]string {
+	return map[string]string{
+		"kty": "OKP",
+		"crv": "Ed25519",
+		"x":   base64.RawURLEncoding.EncodeToString(m.signingPub),
+		"use": "sig",
+		"alg": "EdDSA",
+		"kid": "owner-jwt",
+	}
 }
 
 // HashPlatformToken returns a bcrypt hash of a platform token for storage.
